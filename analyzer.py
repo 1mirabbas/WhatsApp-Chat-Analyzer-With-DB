@@ -1,6 +1,6 @@
 """
-WhatsApp Mesaj Analiz Modülü
-Tüm istatistik ve analiz işlemlerini yapar
+WhatsApp Message Analysis Module
+Performs all statistical and analysis operations
 """
 
 import pandas as pd
@@ -12,16 +12,16 @@ import emoji as emoji_lib
 
 
 class WhatsAppAnalyzer:
-    """WhatsApp mesajlarını analiz eden sınıf"""
+    """Class that analyzes WhatsApp messages"""
     
     def __init__(self, messages_df, contacts_df=None, groups_df=None, media_df=None, lid_map_df=None):
         """
         Args:
             messages_df: Mesajlar DataFrame
-            contacts_df: Kişiler DataFrame (opsiyonel)
-            groups_df: Gruplar DataFrame (opsiyonel)
-            media_df: Medya DataFrame (opsiyonel)
-            lid_map_df: LID eşleştirme DataFrame (opsiyonel)
+            contacts_df: Contacts DataFrame (optional)
+            groups_df: Groups DataFrame (optional)
+            media_df: Media DataFrame (optional)
+            lid_map_df: LID mapping DataFrame (optional)
         """
         self.messages = messages_df.copy()
         self.contacts = contacts_df if contacts_df is not None else pd.DataFrame()
@@ -29,7 +29,7 @@ class WhatsAppAnalyzer:
         self.media = media_df if media_df is not None else pd.DataFrame()
         self.lid_map = lid_map_df if lid_map_df is not None else pd.DataFrame()
         
-        # Tarih sütunlarını ekle
+        # Add date columns
         if 'datetime' in self.messages.columns:
             self.messages['date'] = self.messages['datetime'].dt.date
             self.messages['year'] = self.messages['datetime'].dt.year
@@ -40,21 +40,21 @@ class WhatsAppAnalyzer:
             self.messages['day_name'] = self.messages['datetime'].dt.day_name()
     
     def get_contact_name(self, chat_id):
-        """Chat ID'den kişi adını bul"""
+        """Find contact name from chat ID"""
         if pd.isna(chat_id) or chat_id is None:
             return "Bilinmeyen"
         
         chat_id = str(chat_id)
         original_chat_id = chat_id
         
-        # Eğer LID ise, önce normal JID'ye çevir
+        # If LID, convert to normal JID first
         if '@lid' in chat_id and not self.lid_map.empty:
             if 'lid_jid' in self.lid_map.columns and 'normal_jid' in self.lid_map.columns:
                 lid_row = self.lid_map[self.lid_map['lid_jid'] == chat_id]
                 if not lid_row.empty:
                     chat_id = lid_row.iloc[0]['normal_jid']
         
-        # Kişi adını ara
+        # Search for contact name
         if not self.contacts.empty and 'jid' in self.contacts.columns:
             contact = self.contacts[self.contacts['jid'] == chat_id]
             if not contact.empty:
@@ -67,21 +67,21 @@ class WhatsAppAnalyzer:
                     if name and name != 'None' and name.strip():
                         return name
         
-        # İsim bulunamadı, telefon numarasını göster
+        # Name not found, show phone number
         if '@s.whatsapp.net' in chat_id:
             phone = chat_id.split('@')[0]
-            # + ekle eğer yoksa
+            # Add + if not present
             if not phone.startswith('+'):
                 phone = '+' + phone
             return phone
         elif '@lid' in original_chat_id:
-            # LID'den telefon numarasına çevirebildiysek onu göster
+            # If we could convert LID to phone number, show it
             if chat_id != original_chat_id and '@s.whatsapp.net' in chat_id:
                 phone = chat_id.split('@')[0]
                 if not phone.startswith('+'):
                     phone = '+' + phone
                 return phone
-            # Çeviremediyse LID'yi göster
+            # If couldn't convert, show LID
             return original_chat_id.split('@')[0]
         elif '@' in chat_id:
             return chat_id.split('@')[0]
@@ -92,12 +92,12 @@ class WhatsAppAnalyzer:
         """Genel istatistikleri hesapla"""
         stats = {}
         
-        # Temel sayılar
+        # Basic numbers
         stats['total_messages'] = len(self.messages)
         stats['total_chats'] = self.messages['chat_id'].nunique()
         stats['total_media'] = len(self.messages[self.messages['media_type'].notna() & (self.messages['media_type'] > 0)])
         
-        # Grup vs kişisel
+        # Group vs personal
         if 'is_group' in self.messages.columns:
             stats['total_groups'] = len(self.messages[self.messages['is_group'] == True]['chat_id'].unique())
             stats['total_personal_chats'] = stats['total_chats'] - stats['total_groups']
@@ -117,13 +117,13 @@ class WhatsAppAnalyzer:
                 stats['last_message_date'] = "Bilinmiyor"
                 stats['date_range_days'] = 0
         
-        # En aktif gün
+        # Most active day
         if 'date' in self.messages.columns:
             most_active_day = self.messages.groupby('date').size().idxmax()
             stats['most_active_day'] = str(most_active_day)
             stats['most_active_day_count'] = int(self.messages.groupby('date').size().max())
         
-        # Gönderilen vs alınan
+        # Sent vs received
         if 'from_me' in self.messages.columns:
             stats['sent_messages'] = int((self.messages['from_me'] == 1).sum())
             stats['received_messages'] = int((self.messages['from_me'] == 0).sum())
@@ -131,7 +131,7 @@ class WhatsAppAnalyzer:
         return stats
     
     def get_message_type_distribution(self):
-        """Mesaj türü dağılımı"""
+        """Message type distribution"""
         distribution = {
             'Text': 0,
             'Image': 0,
@@ -149,7 +149,7 @@ class WhatsAppAnalyzer:
             distribution['Text'] = len(self.messages)
             return distribution
         
-        # WhatsApp media_type kodları:
+        # WhatsApp media_type codes:
         # 0 or NULL = Text
         # 1 = Image
         # 2 = Audio
@@ -187,7 +187,7 @@ class WhatsAppAnalyzer:
         return distribution
     
     def get_messages_by_month(self):
-        """Aylara göre mesaj sayısı"""
+        """Message count by month"""
         if 'datetime' not in self.messages.columns:
             return pd.DataFrame()
         
@@ -199,11 +199,11 @@ class WhatsAppAnalyzer:
         return monthly_df
     
     def get_messages_by_day_of_week(self):
-        """Haftanın günlerine göre mesaj dağılımı"""
+        """Message distribution by day of week"""
         if 'day_of_week' not in self.messages.columns:
             return pd.DataFrame()
         
-        day_names = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
+        day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         daily = self.messages.groupby('day_of_week').size()
         
         daily_df = pd.DataFrame({
@@ -213,7 +213,7 @@ class WhatsAppAnalyzer:
         return daily_df
     
     def get_messages_by_hour(self):
-        """Saatlere göre mesaj dağılımı"""
+        """Message distribution by hour"""
         if 'hour' not in self.messages.columns:
             return pd.DataFrame()
         
@@ -225,7 +225,7 @@ class WhatsAppAnalyzer:
         return hourly_df
     
     def get_top_contacts(self, limit=20):
-        """En çok mesajlaşılan kişiler"""
+        """Most messaged contacts"""
         if 'is_group' in self.messages.columns:
             personal_messages = self.messages[self.messages['is_group'] == False]
         else:
@@ -240,7 +240,7 @@ class WhatsAppAnalyzer:
         contact_stats.columns = ['chat_id', 'total_messages', 'sent_by_me', 'last_message']
         contact_stats['received'] = contact_stats['total_messages'] - contact_stats['sent_by_me']
         
-        # Kişi isimlerini ekle
+        # Add contact names
         contact_stats['contact_name'] = contact_stats['chat_id'].apply(self.get_contact_name)
         
         # Balance score hesapla
@@ -291,13 +291,13 @@ class WhatsAppAnalyzer:
         return media_stats
     
     def get_top_media_senders(self, limit=10):
-        """En çok medya gönderenler"""
+        """Top media senders"""
         media_messages = self.messages[self.messages['media_type'].notna() & (self.messages['media_type'] > 0)]
         
         if media_messages.empty:
             return pd.DataFrame()
         
-        # Kişi bazında toplam medya sayısı
+        # Total media count per contact
         media_by_contact = media_messages.groupby('chat_id').agg({
             'message_id': 'count'
         }).reset_index()
@@ -305,10 +305,10 @@ class WhatsAppAnalyzer:
         media_by_contact.columns = ['chat_id', 'total_media']
         media_by_contact = media_by_contact.sort_values('total_media', ascending=False).head(limit)
         
-        # Kişi isimlerini ekle
+        # Add contact names
         media_by_contact['contact_name'] = media_by_contact['chat_id'].apply(self.get_contact_name)
         
-        # Medya türlerine göre detay
+        # Detail by media types
         for media_type in [1, 2, 3]:  # Image, Audio, Video
             type_counts = media_messages[media_messages['media_type'] == media_type].groupby('chat_id').size()
             type_name = {1: 'images', 2: 'audio', 3: 'videos'}.get(media_type, f'type_{media_type}')
@@ -317,29 +317,29 @@ class WhatsAppAnalyzer:
         return media_by_contact
     
     def extract_text_content(self):
-        """Metin içeriklerini çıkar"""
+        """Extract text content"""
         if 'message_text' not in self.messages.columns:
             return []
         
         texts = self.messages['message_text'].dropna()
-        # Byte string olanları çöz
+        # Decode byte strings
         texts = texts.apply(lambda x: x.decode('utf-8', errors='ignore') if isinstance(x, bytes) else str(x))
         return texts.tolist()
     
     def get_word_frequency(self, limit=50):
-        """En çok kullanılan kelimeler"""
+        """Most frequently used words"""
         texts = self.extract_text_content()
         
-        # Tüm metinleri birleştir
+        # Combine all texts
         all_text = ' '.join(texts)
         
-        # Kelimelere ayır (Türkçe karakterleri koru)
+        # Split into words (preserve Turkish characters)
         words = re.findall(r'\b[\wğüşıöçĞÜŞİÖÇ]+\b', all_text.lower())
         
-        # Kısa kelimeleri filtrele
+        # Filter short words
         words = [w for w in words if len(w) > 2]
         
-        # Stop words (yaygın kelimeler) - Türkçe
+        # Stop words (common words) - Turkish
         stop_words = {'bir', 'bu', 'şu', 've', 'veya', 'ama', 'fakat', 'için', 'ile', 'mi', 'mu', 
                       'mı', 'mü', 'da', 'de', 'ta', 'te', 'ki', 'ne', 'var', 'yok', 'ben', 'sen',
                       'o', 'biz', 'siz', 'onlar', 'the', 'a', 'an', 'and', 'or', 'but', 'is', 
@@ -358,7 +358,7 @@ class WhatsAppAnalyzer:
         texts = self.extract_text_content()
         all_text = ' '.join(texts)
         
-        # Emojileri çıkar
+        # Extract emojis
         emojis = [c for c in all_text if c in emoji_lib.EMOJI_DATA]
         
         if not emojis:
@@ -385,19 +385,19 @@ class WhatsAppAnalyzer:
         return stats
     
     def get_activity_heatmap_data(self):
-        """Aktivite ısı haritası için veri (gün x saat)"""
+        """Activity heatmap data (day x hour)"""
         if 'day_of_week' not in self.messages.columns or 'hour' not in self.messages.columns:
             return pd.DataFrame()
         
         heatmap = self.messages.groupby(['day_of_week', 'hour']).size().unstack(fill_value=0)
         
-        day_names = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']
+        day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         heatmap.index = [day_names[int(i)] if int(i) < len(day_names) else str(i) for i in heatmap.index]
         
         return heatmap
     
     def get_deleted_messages_count(self):
-        """Silinmiş mesaj sayısı (eğer varsa)"""
+        """Deleted message count (if any)"""
         # WhatsApp'ta deleted message flag'i varsa
         if 'status' in self.messages.columns:
             deleted = self.messages[self.messages['status'] == 13]  # 13 = deleted
@@ -405,7 +405,7 @@ class WhatsAppAnalyzer:
         return 0
     
     def get_conversation_with_contact(self, chat_id, limit=100):
-        """Belirli bir kişiyle olan konuşmayı getir"""
+        """Get conversation with a specific contact"""
         if 'chat_id' not in self.messages.columns:
             return pd.DataFrame()
         
@@ -414,31 +414,31 @@ class WhatsAppAnalyzer:
         if conv.empty:
             return pd.DataFrame()
         
-        # Sadece gerekli sütunları al ve sırala
+        # Get only necessary columns and sort
         conv = conv.sort_values('timestamp', ascending=True)
         
         # Limit uygula
         if len(conv) > limit:
-            # Son N mesajı al
+            # Get last N messages
             conv = conv.tail(limit)
         
         return conv
     
     def get_longest_messages(self, limit=10):
-        """En uzun mesajları getir"""
+        """Get longest messages"""
         texts = self.extract_text_content()
         
         if not texts:
             return pd.DataFrame()
         
-        # Mesajları uzunluklarıyla birlikte sakla
+        # Store messages with their lengths
         msg_lengths = []
         for idx, text in enumerate(texts):
-            if pd.notna(text) and len(str(text)) > 10:  # Çok kısa olanları atla
+            if pd.notna(text) and len(str(text)) > 10:  # Skip very short ones
                 msg_lengths.append({
                     'index': idx,
                     'length': len(str(text)),
-                    'text': str(text)[:500]  # İlk 500 karakter
+                    'text': str(text)[:500]  # First 500 characters
                 })
         
         if not msg_lengths:
@@ -450,7 +450,7 @@ class WhatsAppAnalyzer:
         return df
     
     def get_random_message_samples(self, count=20):
-        """Rastgele mesaj örnekleri"""
+        """Random message samples"""
         if 'message_text' not in self.messages.columns:
             return pd.DataFrame()
         
@@ -465,7 +465,7 @@ class WhatsAppAnalyzer:
         return samples[['chat_id', 'from_me', 'datetime', 'message_text']]
     
     def get_conversation_details_for_contact(self, chat_id):
-        """Bir kişi için detaylı konuşma bilgileri"""
+        """Detailed conversation info for a contact"""
         if 'chat_id' not in self.messages.columns:
             return {}
         
@@ -485,7 +485,7 @@ class WhatsAppAnalyzer:
             'avg_message_length': conv['message_text'].str.len().mean() if 'message_text' in conv.columns else 0,
         }
         
-        # Medya sayıları
+        # Media counts
         if 'media_type' in conv.columns:
             details['media_count'] = int((conv['media_type'] > 0).sum())
         else:
@@ -498,11 +498,11 @@ class WhatsAppAnalyzer:
         return details
     
     def get_recent_messages(self, limit=50):
-        """Her kullanıcıdan en son mesajı getir"""
+        """Get last message from each user"""
         if 'datetime' not in self.messages.columns:
             return pd.DataFrame()
         
-        # Her chat_id için en son mesajı al
+        # Get last message for each chat_id
         recent_per_contact = []
         for chat_id in self.messages['chat_id'].unique():
             if pd.isna(chat_id):
@@ -515,18 +515,18 @@ class WhatsAppAnalyzer:
         if not recent_per_contact:
             return pd.DataFrame()
         
-        # DataFrame oluştur ve tarihe göre sırala
+        # Create DataFrame and sort by date
         recent_df = pd.DataFrame(recent_per_contact)
         recent_df = recent_df.sort_values('datetime', ascending=False).head(limit)
         
         return recent_df[['chat_id', 'from_me', 'datetime', 'message_text', 'media_type']]
     
     def get_first_messages(self, limit=50):
-        """Her kullanıcıdan ilk mesajı getir"""
+        """Get first message from each user"""
         if 'datetime' not in self.messages.columns:
             return pd.DataFrame()
         
-        # Her chat_id için ilk mesajı al
+        # Get first message for each chat_id
         first_per_contact = []
         for chat_id in self.messages['chat_id'].unique():
             if pd.isna(chat_id):
@@ -539,18 +539,18 @@ class WhatsAppAnalyzer:
         if not first_per_contact:
             return pd.DataFrame()
         
-        # DataFrame oluştur ve tarihe göre sırala
+        # Create DataFrame and sort by date
         first_df = pd.DataFrame(first_per_contact)
         first_df = first_df.sort_values('datetime', ascending=True).head(limit)
         
         return first_df[['chat_id', 'from_me', 'datetime', 'message_text', 'media_type']]
     
     def get_messages_by_keyword(self, keyword, limit=50):
-        """Belirli bir kelime içeren mesajları bul"""
+        """Find messages containing a specific word"""
         if 'message_text' not in self.messages.columns:
             return pd.DataFrame()
         
-        # Mesaj metinlerini string'e çevir
+        # Convert message texts to string
         self.messages['message_text_str'] = self.messages['message_text'].apply(
             lambda x: str(x).lower() if pd.notna(x) else ''
         )
@@ -566,25 +566,25 @@ class WhatsAppAnalyzer:
         return matches[['chat_id', 'from_me', 'datetime', 'message_text']].head(limit)
     
     def get_message_response_time_analysis(self):
-        """Mesajlara yanıt verme süresini analiz et"""
+        """Analyze message response times"""
         if 'datetime' not in self.messages.columns or 'from_me' not in self.messages.columns:
             return {}
         
-        # Sohbetlere göre grupla
+        # Group by conversations
         response_times = []
         
         for chat_id in self.messages['chat_id'].unique():
             chat_msgs = self.messages[self.messages['chat_id'] == chat_id].sort_values('datetime')
             
-            # Ardışık mesajlar arasında from_me değişimi var mı kontrol et
+            # Check if from_me changes between consecutive messages
             for i in range(1, len(chat_msgs)):
                 prev = chat_msgs.iloc[i-1]
                 curr = chat_msgs.iloc[i]
                 
-                # Eğer karşı taraf mesaj attı ve ben cevapladıysam
+                # If the other party messaged and I replied
                 if prev['from_me'] == 0 and curr['from_me'] == 1:
                     time_diff = (curr['datetime'] - prev['datetime']).total_seconds() / 60  # dakika
-                    if 0 < time_diff < 1440:  # 24 saat içinde
+                    if 0 < time_diff < 1440:  # Within 24 hours
                         response_times.append(time_diff)
         
         if not response_times:
@@ -600,15 +600,15 @@ class WhatsAppAnalyzer:
 
 def test_analyzer():
     """Test fonksiyonu"""
-    print("=== WhatsApp Analiz Modülü Test ===")
+    print("=== WhatsApp Analysis Module Test ===")
     
-    # Örnek veri oluştur
+    # Create sample data
     sample_data = {
         'message_id': range(100),
         'chat_id': ['user1@s.whatsapp.net'] * 50 + ['user2@s.whatsapp.net'] * 30 + ['group1@g.us'] * 20,
         'from_me': [0, 1] * 50,
         'timestamp': [1609459200000 + i * 86400000 for i in range(100)],
-        'message_text': ['Test mesajı ' + str(i) for i in range(100)],
+        'message_text': ['Test message ' + str(i) for i in range(100)],
         'media_type': [0] * 70 + [1] * 15 + [3] * 15
     }
     
@@ -618,18 +618,18 @@ def test_analyzer():
     
     analyzer = WhatsAppAnalyzer(df)
     
-    print("\n📊 Genel İstatistikler:")
+    print("\n📊 General Statistics:")
     stats = analyzer.get_general_statistics()
     for key, value in stats.items():
         print(f"  {key}: {value}")
     
-    print("\n📱 Mesaj Türü Dağılımı:")
+    print("\n📱 Message Type Distribution:")
     dist = analyzer.get_message_type_distribution()
     for key, value in dist.items():
         if value > 0:
             print(f"  {key}: {value}")
     
-    print("\n👥 En Çok Mesajlaşılan Kişiler:")
+    print("\n👥 Most Messaged Contacts:")
     top = analyzer.get_top_contacts(5)
     print(top)
 
