@@ -1,13 +1,13 @@
 """
-WhatsApp HTML Rapor Oluşturma Modülü
-Tüm analizleri görselleştirip tek bir HTML dosyasına aktarır
+WhatsApp HTML Report Generator Module
+Visualizes all analyses and exports to a single HTML file
 """
 
 import base64
 from io import BytesIO
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')  # GUI olmadan çalışması için
+matplotlib.use('Agg')  # For running without GUI
 import seaborn as sns
 import plotly.graph_objects as go
 import plotly.express as px
@@ -21,13 +21,13 @@ pd.notna = pd.notna
 
 
 class ReportGenerator:
-    """HTML raporu oluşturan sınıf"""
+    """Class that generates HTML reports"""
     
     def __init__(self, analyzer, output_file='report.html'):
         """
         Args:
             analyzer: WhatsAppAnalyzer nesnesi
-            output_file: Çıktı HTML dosya adı
+            output_file: Output HTML filename
         """
         self.analyzer = analyzer
         self.output_file = output_file
@@ -35,7 +35,7 @@ class ReportGenerator:
         
         # Renk paleti
         self.colors = {
-            'primary': '#25D366',  # WhatsApp yeşili
+            'primary': '#25D366',  # WhatsApp green
             'secondary': '#128C7E',
             'background': '#0a0a0a',
             'card': '#1a1a1a',
@@ -44,7 +44,7 @@ class ReportGenerator:
         }
     
     def matplotlib_to_base64(self, fig):
-        """Matplotlib figürünü base64'e çevir"""
+        """Convert matplotlib figure to base64"""
         buffer = BytesIO()
         fig.savefig(buffer, format='png', dpi=100, bbox_inches='tight', 
                     facecolor='#1a1a1a', edgecolor='none')
@@ -54,7 +54,7 @@ class ReportGenerator:
         return f"data:image/png;base64,{img_base64}"
     
     def plotly_to_html(self, fig):
-        """Plotly figürünü HTML'e çevir"""
+        """Convert Plotly figure to HTML"""
         return fig.to_html(include_plotlyjs='cdn', div_id=f'plot_{len(self.plots)}')
     
     def create_message_type_pie_chart(self, distribution):
@@ -83,7 +83,7 @@ class ReportGenerator:
         return self.plotly_to_html(fig)
     
     def create_monthly_line_chart(self, monthly_df):
-        """Aylık mesaj grafiği"""
+        """Monthly message chart"""
         if monthly_df.empty:
             return None
         
@@ -97,9 +97,9 @@ class ReportGenerator:
         ))
         
         fig.update_layout(
-            title="Aylara Göre Mesaj Aktivitesi",
-            xaxis_title="Ay",
-            yaxis_title="Mesaj Sayısı",
+            title="Message Activity by Month",
+            xaxis_title="Month",
+            yaxis_title="Message Count",
             paper_bgcolor='#1a1a1a',
             plot_bgcolor='#1a1a1a',
             font=dict(color='#e0e0e0'),
@@ -113,7 +113,7 @@ class ReportGenerator:
         return self.plotly_to_html(fig)
     
     def create_hourly_bar_chart(self, hourly_df):
-        """Saatlik mesaj dağılımı bar chart"""
+        """Hourly message distribution bar chart"""
         if hourly_df.empty:
             return None
         
@@ -125,9 +125,9 @@ class ReportGenerator:
         ))
         
         fig.update_layout(
-            title="Saatlere Göre Mesaj Yoğunluğu",
-            xaxis_title="Saat",
-            yaxis_title="Mesaj Sayısı",
+            title="Message Intensity by Hour",
+            xaxis_title="Hour",
+            yaxis_title="Message Count",
             paper_bgcolor='#1a1a1a',
             plot_bgcolor='#1a1a1a',
             font=dict(color='#e0e0e0'),
@@ -140,7 +140,7 @@ class ReportGenerator:
         return self.plotly_to_html(fig)
     
     def create_day_of_week_chart(self, daily_df):
-        """Haftanın günlerine göre mesaj dağılımı"""
+        """Message distribution by day of week"""
         if daily_df.empty:
             return None
         
@@ -152,9 +152,9 @@ class ReportGenerator:
         ))
         
         fig.update_layout(
-            title="Haftanın Günlerine Göre Mesaj Dağılımı",
-            xaxis_title="Gün",
-            yaxis_title="Mesaj Sayısı",
+            title="Message Distribution by Day of Week",
+            xaxis_title="Day",
+            yaxis_title="Message Count",
             paper_bgcolor='#1a1a1a',
             plot_bgcolor='#1a1a1a',
             font=dict(color='#e0e0e0'),
@@ -164,7 +164,7 @@ class ReportGenerator:
         return self.plotly_to_html(fig)
     
     def create_heatmap(self, heatmap_data):
-        """Aktivite ısı haritası (gün x saat)"""
+        """Activity heatmap (day x hour)"""
         if heatmap_data.empty:
             return None
         
@@ -177,9 +177,9 @@ class ReportGenerator:
         ))
         
         fig.update_layout(
-            title="Aktivite Isı Haritası (Gün × Saat)",
-            xaxis_title="Saat",
-            yaxis_title="Gün",
+            title="Activity Heatmap (Day × Hour)",
+            xaxis_title="Hour",
+            yaxis_title="Day",
             paper_bgcolor='#1a1a1a',
             plot_bgcolor='#1a1a1a',
             font=dict(color='#e0e0e0'),
@@ -222,7 +222,7 @@ class ReportGenerator:
             return None
     
     def create_top_contacts_chart(self, top_contacts_df):
-        """En çok mesajlaşılan kişiler grafiği"""
+        """Most messaged contacts chart"""
         if top_contacts_df.empty:
             return None
         
@@ -259,7 +259,7 @@ class ReportGenerator:
         return self.plotly_to_html(fig)
     
     def generate_html_report(self):
-        """Ana HTML raporu oluştur"""
+        """Generate main HTML report"""
         print("📝 Creating HTML report...")
         
         # Run analyses
@@ -471,7 +471,7 @@ class ReportGenerator:
             font-weight: bold;
         }}
         
-        /* WhatsApp Web Tarzı Konuşma Arayüzü */
+        /* WhatsApp Web-Style Conversation Interface */
         .whatsapp-container {{
             display: flex;
             height: 700px;
@@ -721,7 +721,7 @@ class ReportGenerator:
         <div class="section">
             <h2 class="section-title">📝 Message Type Distribution</h2>
             <div class="chart-container">
-                {pie_chart if pie_chart else '<p>Grafik oluşturulamadı</p>'}
+                {pie_chart if pie_chart else '<p>Chart could not be created</p>'}
             </div>
             <div class="stats-grid" style="margin-top: 20px;">
                 {''.join([f'<div class="stat-card"><h3>{key}</h3><div class="value">{value:,}</div></div>' for key, value in msg_distribution.items() if value > 0])}
@@ -793,9 +793,9 @@ class ReportGenerator:
         return self.output_file
     
     def _generate_contacts_table(self, contacts_df):
-        """Kişiler tablosu HTML"""
+        """Contacts table HTML"""
         if contacts_df.empty:
-            return '<p>Kişi verisi bulunamadı</p>'
+            return '<p>Contact data not found</p>'
         
         html = '<table><thead><tr>'
         html += '<th>Rank</th><th>Contact</th><th>Total Messages</th><th>Sent</th>'
@@ -1151,19 +1151,19 @@ class ReportGenerator:
         const conversationsData = ''' + json.dumps(conversations_data, ensure_ascii=False) + ''';
         
         function showConversation(contactId) {
-            // Tüm kişilerin active class'ını kaldır
+            // Remove active class from all contacts
             document.querySelectorAll('.contact-item').forEach(item => {
                 item.classList.remove('active');
             });
             
-            // Tıklanan kişiyi active yap
+            // Make clicked contact active
             event.currentTarget.classList.add('active');
             
-            // Konuşma verilerini al
+            // Get conversation data
             const data = conversationsData[contactId];
             if (!data) return;
             
-            // Header'ı güncelle
+            // Update header
             const header = document.getElementById('chatHeader');
             header.innerHTML = `
                 <div class="name">${data.name}</div>
@@ -1175,7 +1175,7 @@ class ReportGenerator:
                 </div>
             `;
             
-            // Mesajları güncelle
+            // Update messages
             const messagesArea = document.getElementById('chatMessages');
             messagesArea.innerHTML = '';
             
@@ -1210,7 +1210,7 @@ class ReportGenerator:
             messagesArea.scrollTop = messagesArea.scrollHeight;
         }
         
-        // Sayfa yüklendiğinde ilk konuşmayı göster
+        // Show first conversation on page load
         window.addEventListener('DOMContentLoaded', () => {
             const chatMessages = document.getElementById('chatMessages');
             if (chatMessages) {
@@ -1226,8 +1226,8 @@ class ReportGenerator:
 
 def test_report_generator():
     """Test fonksiyonu"""
-    print("=== HTML Rapor Oluşturucu Test ===")
-    print("Ana programdan çalıştırılmalıdır")
+    print("=== HTML Report Generator Test ===")
+    print("Should be run from main program")
 
 
 if __name__ == "__main__":
