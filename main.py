@@ -36,12 +36,12 @@ class WhatsAppAnalyzerApp:
     def validate_files(self):
         """Dosya varlığını kontrol et"""
         if not os.path.exists(self.msgstore_path):
-            print(f"❌ Hata: msgstore.db dosyası bulunamadı: {self.msgstore_path}")
+            print(f"❌ Error: msgstore.db file not found: {self.msgstore_path}")
             return False
         
         if self.wa_db_path and not os.path.exists(self.wa_db_path):
-            print(f"⚠️ Uyarı: wa.db dosyası bulunamadı: {self.wa_db_path}")
-            print("   Grup analizi sınırlı olacak, devam ediliyor...")
+            print(f"⚠️ Warning: wa.db file not found: {self.wa_db_path}")
+            print("   Group analysis will be limited, continuing...")
             self.wa_db_path = None
         
         return True
@@ -49,7 +49,7 @@ class WhatsAppAnalyzerApp:
     def run(self):
         """Ana çalıştırma fonksiyonu"""
         print("=" * 70)
-        print("📱 WhatsApp Veritabanı Analiz Aracı")
+        print("📱 WhatsApp Database Analyzer")
         print("=" * 70)
         print()
         
@@ -59,7 +59,7 @@ class WhatsAppAnalyzerApp:
         
         try:
             # 1. Veritabanını oku
-            print("📖 1/4 - Veritabanı okunuyor...")
+            print("📖 1/4 - Reading database...")
             print("-" * 70)
             self.reader = WhatsAppDatabaseReader(self.msgstore_path, self.wa_db_path)
             self.reader.connect()
@@ -70,16 +70,16 @@ class WhatsAppAnalyzerApp:
             media_df = self.reader.get_media_info()
             
             if messages_df.empty:
-                print("❌ Hata: Mesaj verisi okunamadı!")
+                print("❌ Error: Message data could not be read!")
                 return False
             
-            print(f"   ✅ {len(messages_df):,} mesaj yüklendi")
-            print(f"   ✅ {len(contacts_df):,} kişi bilgisi yüklendi")
-            print(f"   ✅ {len(groups_df):,} grup bilgisi yüklendi")
+            print(f"   ✅ {len(messages_df):,} messages loaded")
+            print(f"   ✅ {len(contacts_df):,} contacts loaded")
+            print(f"   ✅ {len(groups_df):,} groups loaded")
             print()
             
             # 2. Analiz yap
-            print("🔍 2/4 - Veriler analiz ediliyor...")
+            print("🔍 2/4 - Analyzing data...")
             print("-" * 70)
             
             # LID map'i al (eğer varsa)
@@ -95,29 +95,29 @@ class WhatsAppAnalyzerApp:
             
             # Hızlı istatistik göster
             stats = self.analyzer.get_general_statistics()
-            print(f"   📊 Toplam mesaj: {stats.get('total_messages', 0):,}")
-            print(f"   💬 Toplam sohbet: {stats.get('total_chats', 0):,}")
-            print(f"   👥 Toplam grup: {stats.get('total_groups', 0):,}")
-            print(f"   🎬 Toplam medya: {stats.get('total_media', 0):,}")
-            print(f"   📅 Tarih aralığı: {stats.get('first_message_date', 'N/A')} → {stats.get('last_message_date', 'N/A')}")
+            print(f"   📊 Total messages: {stats.get('total_messages', 0):,}")
+            print(f"   💬 Total chats: {stats.get('total_chats', 0):,}")
+            print(f"   👥 Total groups: {stats.get('total_groups', 0):,}")
+            print(f"   🎬 Total media: {stats.get('total_media', 0):,}")
+            print(f"   📅 Date range: {stats.get('first_message_date', 'N/A')} → {stats.get('last_message_date', 'N/A')}")
             print()
             
             # 3. Rapor oluştur
-            print("📝 3/4 - HTML raporu oluşturuluyor...")
+            print("📝 3/4 - Generating HTML report...")
             print("-" * 70)
             self.report_generator = ReportGenerator(self.analyzer, self.output_file)
             output_path = self.report_generator.generate_html_report()
             print()
             
             # 4. Tamamlandı
-            print("✅ 4/4 - İşlem tamamlandı!")
+            print("✅ 4/4 - Process completed!")
             print("=" * 70)
             print()
-            print(f"🎉 Rapor başarıyla oluşturuldu!")
-            print(f"📄 Dosya: {os.path.abspath(output_path)}")
-            print(f"📊 Dosya boyutu: {os.path.getsize(output_path) / 1024:.2f} KB")
+            print(f"🎉 Report successfully created!")
+            print(f"📄 File: {os.path.abspath(output_path)}")
+            print(f"📊 File size: {os.path.getsize(output_path) / 1024:.2f} KB")
             print()
-            print("💡 Raporu görüntülemek için tarayıcınızda açın:")
+            print("💡 Open the report in your browser:")
             print(f"   file://{os.path.abspath(output_path)}")
             print()
             
@@ -127,11 +127,11 @@ class WhatsAppAnalyzerApp:
             return True
             
         except KeyboardInterrupt:
-            print("\n\n⚠️ İşlem kullanıcı tarafından iptal edildi")
+            print("\n\n⚠️ Process cancelled by user")
             return False
-            
+        
         except Exception as e:
-            print(f"\n❌ Hata oluştu: {e}")
+            print(f"\n❌ Error occurred: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -190,16 +190,16 @@ Notlar:
     if len(sys.argv) == 1:
         parser.print_help()
         print("\n" + "=" * 70)
-        print("Hızlı Başlangıç:")
+        print("Quick Start:")
         print("=" * 70)
-        print("1. WhatsApp veritabanı dosyalarınızı bu klasöre kopyalayın:")
-        print("   - msgstore.db (zorunlu)")
-        print("   - wa.db (önerilir)")
+        print("1. Copy your WhatsApp database files to this folder:")
+        print("   - msgstore.db (required)")
+        print("   - wa.db (recommended)")
         print()
-        print("2. Programı çalıştırın:")
+        print("2. Run the program:")
         print("   python main.py msgstore.db -w wa.db")
         print()
-        print("3. Oluşan report.html dosyasını tarayıcınızda açın")
+        print("3. Open the generated report.html in your browser")
         print("=" * 70)
         sys.exit(0)
     
