@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 import json
 
-# pandas için kısayol
+# pandas display options
 pd.notna = pd.notna
 
 
@@ -197,7 +197,7 @@ class ReportGenerator:
             # Create word frequency dictionary
             word_dict = dict(zip(word_freq_df['word'], word_freq_df['frequency']))
             
-            # WordCloud oluştur
+            # Create WordCloud
             wordcloud = WordCloud(
                 width=1200, 
                 height=600,
@@ -208,7 +208,7 @@ class ReportGenerator:
                 min_font_size=10
             ).generate_from_frequencies(word_dict)
             
-            # Matplotlib figürü oluştur
+            # Create matplotlib figure
             fig, ax = plt.subplots(figsize=(12, 6), facecolor='#1a1a1a')
             ax.imshow(wordcloud, interpolation='bilinear')
             ax.axis('off')
@@ -260,9 +260,9 @@ class ReportGenerator:
     
     def generate_html_report(self):
         """Ana HTML raporu oluştur"""
-        print("📝 HTML raporu oluşturuluyor...")
+        print("📝 Creating HTML report...")
         
-        # Analizleri çalıştır
+        # Run analyses
         general_stats = self.analyzer.get_general_statistics()
         msg_distribution = self.analyzer.get_message_type_distribution()
         monthly_data = self.analyzer.get_messages_by_month()
@@ -278,14 +278,14 @@ class ReportGenerator:
         heatmap_data = self.analyzer.get_activity_heatmap_data()
         deleted_count = self.analyzer.get_deleted_messages_count()
         
-        # YENİ: Detaylı analizler
+        # Detailed analyses
         longest_messages = self.analyzer.get_longest_messages(10)
         recent_messages = self.analyzer.get_recent_messages(30)
         first_messages = self.analyzer.get_first_messages(20)
         response_time_stats = self.analyzer.get_message_response_time_analysis()
         
-        # Grafikleri oluştur
-        print("📊 Grafikler oluşturuluyor...")
+        # Create charts
+        print("📊 Creating charts...")
         pie_chart = self.create_message_type_pie_chart(msg_distribution)
         monthly_chart = self.create_monthly_line_chart(monthly_data)
         hourly_chart = self.create_hourly_bar_chart(hourly_data)
@@ -294,7 +294,7 @@ class ReportGenerator:
         contacts_chart = self.create_top_contacts_chart(top_contacts)
         wordcloud_img = self.create_wordcloud(word_freq)
         
-        # HTML içeriği oluştur
+        # Generate HTML content
         html_content = f"""
 <!DOCTYPE html>
 <html lang="tr">
@@ -785,11 +785,11 @@ class ReportGenerator:
 </html>
 """
         
-        # HTML dosyasını kaydet
+        # Save HTML file
         with open(self.output_file, 'w', encoding='utf-8') as f:
             f.write(html_content)
         
-        print(f"✅ Rapor başarıyla oluşturuldu: {self.output_file}")
+        print(f"✅ Report successfully created: {self.output_file}")
         return self.output_file
     
     def _generate_contacts_table(self, contacts_df):
@@ -1029,22 +1029,22 @@ class ReportGenerator:
         html += '<div class="contacts-sidebar">'
         html += '<div style="padding: 20px; background: #128C7E; color: white; font-weight: bold;">Conversations</div>'
         
-        # JavaScript için konuşma verileri
+        # Conversation data for JavaScript
         conversations_data = {}
         
-        # Her kişi için kişi listesinde item oluştur
+        # Create contact list item for each person
         for idx, row in top_contacts_df.head(15).iterrows():
             chat_id = row.get('chat_id', '')
             contact_name = row.get('contact_name', 'Unknown')
             total_messages = row.get('total_messages', 0)
             
-            # Detaylı bilgileri al
+            # Get detailed information
             details = self.analyzer.get_conversation_details_for_contact(chat_id)
             
             if not details:
                 continue
             
-            # Son mesajın önizlemesi
+            # Last message preview
             conversation = self.analyzer.get_conversation_with_contact(chat_id, limit=200)
             
             last_msg_preview = ""
@@ -1053,7 +1053,7 @@ class ReportGenerator:
                 last_msg_text = str(last_msg.get('message_text', ''))[:50] if pd.notna(last_msg.get('message_text')) else '[Medya]'
                 last_msg_preview = last_msg_text
             
-            # Kişi listesi item'ı
+            # Contact list item
             contact_id = f"contact_{idx}"
             active_class = "active" if idx == 0 else ""
             
@@ -1063,7 +1063,7 @@ class ReportGenerator:
                 <div class="count">{total_messages:,} messages</div>
             </div>'''
             
-            # Konuşma verilerini sakla (datetime'ları string'e çevir)
+            # Store conversation data (convert datetimes to strings)
             details_json = {
                 'total_messages': details.get('total_messages', 0),
                 'sent_by_me': details.get('sent_by_me', 0),
@@ -1080,7 +1080,7 @@ class ReportGenerator:
                 'messages': []
             }
             
-            # Mesajları JSON formatında hazırla
+            # Prepare messages in JSON format
             if not conversation.empty:
                 for _, msg in conversation.iterrows():
                     from_me = int(msg.get('from_me', 0))
@@ -1097,11 +1097,11 @@ class ReportGenerator:
         
         html += '</div>'  # contacts-sidebar sonu
         
-        # Sağ taraf - Chat alanı
+        # Right side - Chat area
         html += '<div class="chat-area">'
         html += '<div class="chat-header" id="chatHeader">'
         
-        # İlk kişiyi göster
+        # Show first contact
         if conversations_data:
             first_contact = list(conversations_data.keys())[0]
             first_data = conversations_data[first_contact]
@@ -1115,10 +1115,10 @@ class ReportGenerator:
         
         html += '</div>'
         
-        # Mesaj alanı
+        # Message area
         html += '<div class="chat-messages" id="chatMessages">'
         
-        # İlk kişinin mesajlarını göster
+        # Show first contact's messages
         if conversations_data:
             first_contact = list(conversations_data.keys())[0]
             first_messages = conversations_data[first_contact]['messages']
