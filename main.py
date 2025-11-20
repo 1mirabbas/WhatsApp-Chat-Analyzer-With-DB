@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-WhatsApp Veritabanı Analiz Aracı
-msgstore.db ve wa.db dosyalarını analiz ederek detaylı HTML raporu oluşturur
+WhatsApp Database Analyzer
+Analyzes msgstore.db and wa.db files and generates detailed HTML reports
 """
 
 import os
@@ -16,14 +16,14 @@ from report_generator import ReportGenerator
 
 
 class WhatsAppAnalyzerApp:
-    """Ana uygulama sınıfı"""
+    """Main application class"""
     
     def __init__(self, msgstore_path, wa_db_path=None, output_file='report.html'):
         """
         Args:
             msgstore_path: msgstore.db dosya yolu
             wa_db_path: wa.db dosya yolu (opsiyonel)
-            output_file: Çıktı HTML dosya adı
+            output_file: Output HTML filename
         """
         self.msgstore_path = msgstore_path
         self.wa_db_path = wa_db_path
@@ -34,7 +34,7 @@ class WhatsAppAnalyzerApp:
         self.report_generator = None
     
     def validate_files(self):
-        """Dosya varlığını kontrol et"""
+        """Check file existence"""
         if not os.path.exists(self.msgstore_path):
             print(f"❌ Error: msgstore.db file not found: {self.msgstore_path}")
             return False
@@ -47,18 +47,18 @@ class WhatsAppAnalyzerApp:
         return True
     
     def run(self):
-        """Ana çalıştırma fonksiyonu"""
+        """Main execution function"""
         print("=" * 70)
         print("📱 WhatsApp Database Analyzer")
         print("=" * 70)
         print()
         
-        # Dosyaları kontrol et
+        # Check files
         if not self.validate_files():
             return False
         
         try:
-            # 1. Veritabanını oku
+            # 1. Read database
             print("📖 1/4 - Reading database...")
             print("-" * 70)
             self.reader = WhatsAppDatabaseReader(self.msgstore_path, self.wa_db_path)
@@ -82,7 +82,7 @@ class WhatsAppAnalyzerApp:
             print("🔍 2/4 - Analyzing data...")
             print("-" * 70)
             
-            # LID map'i al (eğer varsa)
+            # Get LID map (if available)
             lid_map_df = getattr(self.reader, 'lid_map_df', None)
             
             self.analyzer = WhatsAppAnalyzer(
@@ -93,7 +93,7 @@ class WhatsAppAnalyzerApp:
                 lid_map_df
             )
             
-            # Hızlı istatistik göster
+            # Show quick statistics
             stats = self.analyzer.get_general_statistics()
             print(f"   📊 Total messages: {stats.get('total_messages', 0):,}")
             print(f"   💬 Total chats: {stats.get('total_chats', 0):,}")
@@ -102,14 +102,14 @@ class WhatsAppAnalyzerApp:
             print(f"   📅 Date range: {stats.get('first_message_date', 'N/A')} → {stats.get('last_message_date', 'N/A')}")
             print()
             
-            # 3. Rapor oluştur
+            # 3. Generate report
             print("📝 3/4 - Generating HTML report...")
             print("-" * 70)
             self.report_generator = ReportGenerator(self.analyzer, self.output_file)
             output_path = self.report_generator.generate_html_report()
             print()
             
-            # 4. Tamamlandı
+            # 4. Completed
             print("✅ 4/4 - Process completed!")
             print("=" * 70)
             print()
@@ -121,7 +121,7 @@ class WhatsAppAnalyzerApp:
             print(f"   file://{os.path.abspath(output_path)}")
             print()
             
-            # Veritabanı bağlantısını kapat
+            # Close database connection
             self.reader.close()
             
             return True
@@ -142,22 +142,22 @@ class WhatsAppAnalyzerApp:
 
 
 def main():
-    """Komut satırı arayüzü"""
+    """Command line interface"""
     parser = argparse.ArgumentParser(
-        description='WhatsApp Veritabanı Analiz Aracı - Detaylı HTML raporu oluşturur',
+        description='WhatsApp Database Analyzer - Generates detailed HTML reports',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Kullanım Örnekleri:
+Usage Examples:
   %(prog)s msgstore.db
   %(prog)s msgstore.db -w wa.db
   %(prog)s msgstore.db -w wa.db -o my_report.html
   %(prog)s /path/to/msgstore.db -w /path/to/wa.db
 
 Notlar:
-  - msgstore.db: Zorunlu, mesaj veritabanı
-  - wa.db: Opsiyonel, kişi ve grup bilgileri için (önerilir)
-  - Rapor varsayılan olarak 'report.html' adıyla oluşturulur
-  - Tüm işlemler offline yapılır, verileriniz gizlidir
+  - msgstore.db: Required, message database
+  - wa.db: Optional, for contact and group information (recommended)
+  - Report is generated as 'report.html' by default
+  - All operations are offline, your data is private
         """
     )
     
@@ -169,14 +169,14 @@ Notlar:
     parser.add_argument(
         '-w', '--wa-db',
         dest='wa_db',
-        help='wa.db dosya yolu (opsiyonel, grup ve kişi analizi için)',
+        help='wa.db file path (optional, for group and contact analysis)',
         default=None
     )
     
     parser.add_argument(
         '-o', '--output',
         dest='output',
-        help='Çıktı HTML dosya adı (varsayılan: report.html)',
+        help='Output HTML filename (default: report.html)',
         default='report.html'
     )
     
@@ -186,7 +186,7 @@ Notlar:
         version='%(prog)s 1.0.0'
     )
     
-    # Eğer argüman verilmemişse yardım göster
+    # Show help if no arguments provided
     if len(sys.argv) == 1:
         parser.print_help()
         print("\n" + "=" * 70)
@@ -205,7 +205,7 @@ Notlar:
     
     args = parser.parse_args()
     
-    # Uygulamayı çalıştır
+    # Run application
     app = WhatsAppAnalyzerApp(
         msgstore_path=args.msgstore,
         wa_db_path=args.wa_db,
