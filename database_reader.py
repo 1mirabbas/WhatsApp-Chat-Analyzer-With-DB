@@ -1,6 +1,6 @@
 """
-WhatsApp Veritabanı Okuyucu Modülü
-msgstore.db ve wa.db dosyalarını okur ve işler
+WhatsApp Database Reader Module
+Reads and processes msgstore.db and wa.db files
 """
 
 import sqlite3
@@ -10,7 +10,7 @@ import os
 
 
 class WhatsAppDatabaseReader:
-    """WhatsApp veritabanlarını okuma ve işleme sınıfı"""
+    """Class for reading and processing WhatsApp databases"""
     
     def __init__(self, msgstore_path, wa_db_path=None):
         """
@@ -25,13 +25,13 @@ class WhatsAppDatabaseReader:
         self.lid_map_df = None
         
     def connect(self):
-        """Veritabanlarına bağlan"""
+        """Connect to databases"""
         try:
             if os.path.exists(self.msgstore_path):
                 self.msgstore_conn = sqlite3.connect(self.msgstore_path)
                 print(f"✅ msgstore.db connection successful")
             else:
-                raise FileNotFoundError(f"msgstore.db bulunamadı: {self.msgstore_path}")
+                raise FileNotFoundError(f"msgstore.db not found: {self.msgstore_path}")
                 
             if self.wa_db_path and os.path.exists(self.wa_db_path):
                 self.wa_conn = sqlite3.connect(self.wa_db_path)
@@ -44,22 +44,22 @@ class WhatsAppDatabaseReader:
             raise
     
     def close(self):
-        """Veritabanı bağlantılarını kapat"""
+        """Close database connections"""
         if self.msgstore_conn:
             self.msgstore_conn.close()
         if self.wa_conn:
             self.wa_conn.close()
     
     def get_messages(self):
-        """Tüm mesajları çek"""
+        """Fetch all messages"""
         try:
-            # Önce sender_jid_row_id sütununun olup olmadığını kontrol et
+            # First check if sender_jid_row_id column exists
             cursor = self.msgstore_conn.cursor()
             cursor.execute("PRAGMA table_info(message)")
             columns = [col[1] for col in cursor.fetchall()]
             has_sender_jid = 'sender_jid_row_id' in columns
             
-            # Modern WhatsApp veritabanı yapısı (normalizeli)
+            # Modern WhatsApp database structure (normalized)
             if has_sender_jid:
                 query = """
                 SELECT 
@@ -100,14 +100,14 @@ class WhatsAppDatabaseReader:
             
             df = pd.read_sql_query(query, self.msgstore_conn)
             
-            # Timestamp'i datetime'a çevir (milisaniye cinsinden)
+            # Convert timestamp to datetime (in milliseconds)
             df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', errors='coerce')
             
-            # Chat türünü belirle (grup mu, kişisel mi)
+            # Determine chat type (group or personal)
             df['is_group'] = df['chat_jid'].str.contains('@g.us', na=False)
-            df['chat_id'] = df['chat_jid']  # Uyumluluk için
+            df['chat_id'] = df['chat_jid']  # For compatibility
             
-            # Medya bilgisini message_type'dan çıkar
+            # Extract media info from message_type
             df['media_type'] = df['message_type'].apply(self._map_message_type_to_media)
             
             # from_me bilgisini kontrol et ve logla
@@ -126,11 +126,11 @@ class WhatsAppDatabaseReader:
             return pd.DataFrame()
     
     def _map_message_type_to_media(self, msg_type):
-        """Message type'ı medya türüne çevir"""
+        """Convert message type to media type"""
         if pd.isna(msg_type):
             return 0  # Text
         
-        # WhatsApp message_type kodları
+        # WhatsApp message_type codes
         type_map = {
             0: 0,   # Text
             1: 1,   # Image
@@ -153,9 +153,9 @@ class WhatsAppDatabaseReader:
         return type_map.get(int(msg_type), 0)
     
     def get_contacts(self):
-        """Kişi listesini çek"""
+        """Fetch contact list"""
         try:
-            # wa.db'den kişileri çek
+            # Get contacts from wa.db
             if self.wa_conn:
                 query = """
                 SELECT 
@@ -167,7 +167,7 @@ class WhatsAppDatabaseReader:
                 """
                 df = pd.read_sql_query(query, self.wa_conn)
                 
-                # msgstore'dan LID -> normal JID eşleştirmesini al
+                # Get LID -> normal JID mapping from msgstore
                 try:
                     lid_map_query = """
                     SELECT 
@@ -179,13 +179,13 @@ class WhatsAppDatabaseReader:
                     """
                     lid_map = pd.read_sql_query(lid_map_query, self.msgstore_conn)
                     
-                    # LID map'i kaydet (analyzer için)
+                    # Save LID map (for analyzer)
                     self.lid_map_df = lid_map
                     
-                    # LID -> isim eşleştirmesi oluştur
+                    # Create LID -> name mapping
                     lid_to_normal = dict(zip(lid_map['lid_jid'], lid_map['normal_jid']))
                     
-                    # Her LID için wa_contacts'tan ismi bul
+                    # Find name from wa_contacts for each LID
                     lid_contacts = []
                     for lid_jid, normal_jid in lid_to_normal.items():
                         contact = df[df['jid'] == normal_jid]
@@ -197,7 +197,7 @@ class WhatsAppDatabaseReader:
                                 'status': contact.iloc[0]['status']
                             })
                     
-                    # LID kişilerini ekle
+                    # Add LID contacts
                     if lid_contacts:
                         lid_df = pd.DataFrame(lid_contacts)
                         df = pd.concat([df, lid_df], ignore_index=True)
@@ -243,9 +243,9 @@ class WhatsAppDatabaseReader:
             return pd.DataFrame()
     
     def get_groups(self):
-        """Grup bilgilerini çek"""
+        """Fetch group information"""
         try:
-            # msgstore'dan chat tablosundan grupları al
+            # Get groups from chat table in msgstore
             query = """
             SELECT 
                 c._id as chat_row_id,
@@ -258,7 +258,7 @@ class WhatsAppDatabaseReader:
             """
             df = pd.read_sql_query(query, self.msgstore_conn)
             
-            # Grup adı yoksa JID'den oluştur
+            # If no group name, create from JID
             if 'group_name' in df.columns:
                 df['group_name'] = df['group_name'].fillna(
                     df['group_id'].str.split('@').str[0]
@@ -274,7 +274,7 @@ class WhatsAppDatabaseReader:
             return pd.DataFrame()
     
     def get_group_participants(self):
-        """Grup üyelerini çek"""
+        """Fetch group members"""
         try:
             if self.wa_conn:
                 query = """
@@ -296,7 +296,7 @@ class WhatsAppDatabaseReader:
             return pd.DataFrame()
     
     def get_media_info(self):
-        """Medya dosya bilgilerini çek"""
+        """Fetch media file information"""
         try:
             # message_media tablosundan medya bilgilerini al
             query = """
@@ -336,52 +336,52 @@ class WhatsAppDatabaseReader:
                 return pd.DataFrame()
     
     def get_table_info(self):
-        """Veritabanı tablo yapısını göster (debug için)"""
+        """Show database table structure (for debugging)"""
         try:
             query = "SELECT name FROM sqlite_master WHERE type='table'"
             tables = pd.read_sql_query(query, self.msgstore_conn)
-            print("\n📋 msgstore.db Tabloları:")
+            print("\n📋 msgstore.db Tables:")
             print(tables)
             
             if self.wa_conn:
                 tables_wa = pd.read_sql_query(query, self.wa_conn)
-                print("\n📋 wa.db Tabloları:")
+                print("\n📋 wa.db Tables:")
                 print(tables_wa)
                 
         except Exception as e:
-            print(f"❌ Tablo bilgisi alınamadı: {e}")
+            print(f"❌ Could not get table info: {e}")
 
 
 def test_reader():
     """Test fonksiyonu"""
-    print("=== WhatsApp Veritabanı Okuyucu Test ===")
+    print("=== WhatsApp Database Reader Test ===")
     
-    # Test için örnek yollar
+    # Example paths for testing
     msgstore = "msgstore.db"
     wa_db = "wa.db"
     
     if not os.path.exists(msgstore):
-        print("⚠️ Test için msgstore.db dosyası bulunamadı")
-        print("Kullanım: reader = WhatsAppDatabaseReader('msgstore.db', 'wa.db')")
+        print("⚠️ msgstore.db file not found for testing")
+        print("Usage: reader = WhatsAppDatabaseReader('msgstore.db', 'wa.db')")
         return
     
     reader = WhatsAppDatabaseReader(msgstore, wa_db)
     reader.connect()
     
-    # Tablo yapısını göster
+    # Show table structure
     reader.get_table_info()
     
-    # Verileri çek
+    # Fetch data
     messages = reader.get_messages()
     contacts = reader.get_contacts()
     groups = reader.get_groups()
     media = reader.get_media_info()
     
-    print(f"\n📊 Özet:")
-    print(f"  Mesajlar: {len(messages)}")
-    print(f"  Kişiler: {len(contacts)}")
-    print(f"  Gruplar: {len(groups)}")
-    print(f"  Medya: {len(media)}")
+    print(f"\n📊 Summary:")
+    print(f"  Messages: {len(messages)}")
+    print(f"  Contacts: {len(contacts)}")
+    print(f"  Groups: {len(groups)}")
+    print(f"  Media: {len(media)}")
     
     reader.close()
 
