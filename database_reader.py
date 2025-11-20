@@ -29,18 +29,18 @@ class WhatsAppDatabaseReader:
         try:
             if os.path.exists(self.msgstore_path):
                 self.msgstore_conn = sqlite3.connect(self.msgstore_path)
-                print(f"✅ msgstore.db bağlantısı başarılı")
+                print(f"✅ msgstore.db connection successful")
             else:
                 raise FileNotFoundError(f"msgstore.db bulunamadı: {self.msgstore_path}")
                 
             if self.wa_db_path and os.path.exists(self.wa_db_path):
                 self.wa_conn = sqlite3.connect(self.wa_db_path)
-                print(f"✅ wa.db bağlantısı başarılı")
+                print(f"✅ wa.db connection successful")
             else:
-                print(f"⚠️ wa.db bulunamadı, grup analizi sınırlı olacak")
+                print(f"⚠️ wa.db not found, group analysis will be limited")
                 
         except Exception as e:
-            print(f"❌ Veritabanı bağlantı hatası: {e}")
+            print(f"❌ Database connection error: {e}")
             raise
     
     def close(self):
@@ -114,15 +114,15 @@ class WhatsAppDatabaseReader:
             if 'from_me' in df.columns:
                 sent_count = (df['from_me'] == 1).sum()
                 received_count = (df['from_me'] == 0).sum()
-                print(f"✅ {len(df)} mesaj yüklendi (Gönderilen: {sent_count}, Alınan: {received_count})")
+                print(f"✅ {len(df)} messages loaded (Sent: {sent_count}, Received: {received_count})")
             else:
-                print(f"✅ {len(df)} mesaj yüklendi")
+                print(f"✅ {len(df)} messages loaded")
             
             return df
             
         except Exception as e:
-            print(f"❌ Mesaj okuma hatası: {e}")
-            print(f"   Hata detayı: {str(e)}")
+            print(f"❌ Message reading error: {e}")
+            print(f"   Error details: {str(e)}")
             return pd.DataFrame()
     
     def _map_message_type_to_media(self, msg_type):
@@ -202,10 +202,10 @@ class WhatsAppDatabaseReader:
                         lid_df = pd.DataFrame(lid_contacts)
                         df = pd.concat([df, lid_df], ignore_index=True)
                     
-                    print(f"✅ {len(df)} kişi yüklendi (LID eşleştirme ile)")
+                    print(f"✅ {len(df)} contacts loaded (with LID mapping)")
                 except Exception as lid_error:
-                    print(f"   ⚠️ LID eşleştirme yapılamadı: {lid_error}")
-                    print(f"✅ {len(df)} kişi yüklendi")
+                    print(f"   ⚠️ LID mapping failed: {lid_error}")
+                    print(f"✅ {len(df)} contacts loaded")
                     self.lid_map_df = pd.DataFrame()
                 
                 return df
@@ -235,11 +235,11 @@ class WhatsAppDatabaseReader:
                 except:
                     self.lid_map_df = pd.DataFrame()
                 
-                print(f"✅ {len(df)} JID kaydı yüklendi (wa.db yok)")
+                print(f"✅ {len(df)} JID records loaded (no wa.db)")
                 return df
                 
         except Exception as e:
-            print(f"⚠️ Kişi okuma hatası: {e}")
+            print(f"⚠️ Contact reading error: {e}")
             return pd.DataFrame()
     
     def get_groups(self):
@@ -266,11 +266,11 @@ class WhatsAppDatabaseReader:
             else:
                 df['group_name'] = df['group_id'].str.split('@').str[0]
             
-            print(f"✅ {len(df)} grup bulundu")
+            print(f"✅ {len(df)} groups found")
             return df
                 
         except Exception as e:
-            print(f"⚠️ Grup okuma hatası: {e}")
+            print(f"⚠️ Group reading error: {e}")
             return pd.DataFrame()
     
     def get_group_participants(self):
@@ -285,14 +285,14 @@ class WhatsAppDatabaseReader:
                 FROM group_participants
                 """
                 df = pd.read_sql_query(query, self.wa_conn)
-                print(f"✅ {len(df)} grup üyesi kaydı yüklendi")
+                print(f"✅ {len(df)} group member records loaded")
                 return df
             else:
-                print("⚠️ wa.db yok, grup üyeleri belirlenemiyor")
+                print("⚠️ No wa.db, cannot determine group members")
                 return pd.DataFrame()
                 
         except Exception as e:
-            print(f"⚠️ Grup üyesi okuma hatası: {e}")
+            print(f"⚠️ Group member reading error: {e}")
             return pd.DataFrame()
     
     def get_media_info(self):
@@ -313,11 +313,11 @@ class WhatsAppDatabaseReader:
             """
             df = pd.read_sql_query(query, self.msgstore_conn)
             df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', errors='coerce')
-            print(f"✅ {len(df)} medya kaydı yüklendi")
+            print(f"✅ {len(df)} media records loaded")
             return df
             
         except Exception as e:
-            print(f"⚠️ Medya okuma hatası: {e}")
+            print(f"⚠️ Media reading error: {e}")
             # Alternatif: sadece message tablosundan
             try:
                 query = """
@@ -330,7 +330,7 @@ class WhatsAppDatabaseReader:
                 """
                 df = pd.read_sql_query(query, self.msgstore_conn)
                 df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms', errors='coerce')
-                print(f"✅ {len(df)} medya kaydı yüklendi (temel)")
+                print(f"✅ {len(df)} media records loaded (basic)")
                 return df
             except:
                 return pd.DataFrame()
